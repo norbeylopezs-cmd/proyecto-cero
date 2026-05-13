@@ -1,92 +1,97 @@
-# importamos Flask desde la libreria flask
-# Flask sirve para crear APIs y servidores web en Python
-from flask import Flask
+from flask import Flask, request
+from flask_sqlalchemy import SQLAlchemy
 
-
-# aqui se crea la aplicacion
-# __name__ le dice a Flask cual es el archivo principal
+# Se crea la aplicación Flask
 app = Flask(__name__)
 
+# Configuración de la base de datos SQLite
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydatabase.db'
 
-# ==================================================
-# STATUS 200
-# ==================================================
+# Conexión entre Flask y SQLAlchemy
+db = SQLAlchemy(app)
 
-# esta ruta sirve para comprobar que la API funciona correctamente
+
+# Modelo de usuarios
+class User(db.Model):
+
+    # ID único de cada usuario
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Nombre del usuario
+    name = db.Column(db.String(100), nullable=False)
+
+    # Correo del usuario
+    email = db.Column(db.String(100), nullable=False)
+
+
+# Ruta para crear usuarios
+@app.route('/users', methods=['POST'])
+def create_user():
+
+    # Obtiene el JSON enviado en la petición
+    data = request.get_json()
+
+    # Crea un nuevo usuario con los datos recibidos
+    new_user = User(
+        name=data['name'],
+        email=data['email']
+    )
+
+    # Agrega el usuario a la sesión
+    db.session.add(new_user)
+
+    # Guarda los cambios en la base de datos
+    db.session.commit()
+
+    # Devuelve una respuesta en formato JSON
+    return {
+        "message": "Usuario creado",
+        "id": new_user.id,
+        "name": new_user.name,
+        "email": new_user.email
+    }, 201
+
+
+# Ruta para comprobar que la API funciona
 @app.route('/health', methods=['GET'])
-
-# esta funcion se ejecuta cuando alguien entra a /health
 def health():
 
-    # devolvemos un JSON
-    # y el codigo 200 significa "todo salio bien"
     return {"status": "ok"}, 200
 
 
-# ==================================================
-# STATUS 400
-# ==================================================
-
-# esta ruta simula un bad request
+# Ruta que simula un error 400
 @app.route('/bad-request', methods=['GET'])
-
-# esta funcion se ejecuta cuando alguien entra a /bad-request
 def bad_request():
 
-    # devolvemos un mensaje de error
-    # el status 400 significa que el cliente envio algo incorrecto
     return {"error": "bad request"}, 400
 
 
-# ==================================================
-# STATUS 401
-# ==================================================
-
-# esta ruta simula un acceso no autorizado
+# Ruta que simula un error 401
 @app.route('/unauthorized', methods=['GET'])
-
-# esta funcion se ejecuta cuando alguien entra a /unauthorized
 def unauthorized():
 
-    # devolvemos un mensaje de error
-    # el status 401 significa "no autorizado"
     return {"error": "unauthorized"}, 401
 
 
-# ==================================================
-# STATUS 404
-# ==================================================
-
-# esta ruta simula que el recurso no fue encontrado
+# Ruta que simula un error 404
 @app.route('/not-found', methods=['GET'])
-
-# esta funcion se ejecuta cuando alguien entra a /not-found
 def not_found():
 
-    # devolvemos un mensaje de error
-    # el status 404 significa "no encontrado"
     return {"error": "not found"}, 404
 
 
-# ==================================================
-# STATUS 500
-# ==================================================
-
-# esta ruta simula un error interno del servidor
+# Ruta que simula un error 500
 @app.route('/server-error', methods=['GET'])
-
-# esta funcion se ejecuta cuando alguien entra a /server-error
 def server_error():
 
-    # devolvemos un mensaje de error
-    # el status 500 significa "error interno del servidor"
     return {"error": "internal server error"}, 500
 
 
-# esta condicion verifica si el archivo se esta ejecutando directamente
-if __name__ == '__main__':
+# Crea las tablas si no existen
+with app.app_context():
+    db.create_all()
 
-    # app.run() sirve para iniciar el servidor Flask
-    # debug=True muestra errores detallados
-    # y reinicia automaticamente cuando haces cambios
+
+# Inicia el servidor Flask
+if __name__ == '__main__':
     app.run(debug=True)
